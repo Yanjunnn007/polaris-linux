@@ -1,0 +1,45 @@
+From: polaris port <local@localhost>
+Date: Tue, 6 Oct 2026 00:00:00 +0000
+Subject: [PATCH] drm: panel: Enable prepare_prev_first flag for NT35596s
+
+This panel needs DSI commands sent in its prepare() callback, so the
+panel's prepare must run after the DSI host has been powered on
+(pre_enable).  Without prepare_prev_first, the DRM bridge chain runs the
+panel's prepare() before the DSI host power_on, so the first
+mipi_dsi_dcs_write() reaches dsi_host_transfer() with
+msm_host->power_on == false and returns -EINVAL:
+
+  panel-jdi-nt35596s ae94000.dsi.0: failed to send DCS Init 1st Code: -22
+
+Set the prepare_prev_first flag to run the panel prepare at the end of
+the pre_enable chain (after host power_on), allowing the DCS init
+commands to be transmitted.  This is the same flag already set for the
+other SDM845 panels (sofef00, s6e3fc2x01, nt36672a, ft8719).
+
+Adapted from Icenowy Zheng's sdm845-mainline commit 2c875e90
+("drm: panel: Enable prepare_prev_first flag for NT35596s"), which is
+part of MR !85 "Hotfixes for sdm845-xiaomi-polaris" that has not yet
+been merged into the 7.1 branch.
+
+Tested on Xiaomi Mi MIX 2S (polaris, SDM845): with this and the DSI PLL
+digital-top fix, the panel receives its init sequence and the display
+outputs.
+
+Signed-off-by: polaris port <local@localhost>
+---
+ drivers/gpu/drm/panel/panel-novatek-nt35596s.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/gpu/drm/panel/panel-novatek-nt35596s.c b/drivers/gpu/drm/panel/panel-novatek-nt35596s.c
+--- a/drivers/gpu/drm/panel/panel-novatek-nt35596s.c
++++ b/drivers/gpu/drm/panel/panel-novatek-nt35596s.c
+@@ -477,6 +477,7 @@ static int nt35596s_panel_add(struct nt35596s_panel *pinfo)
+ 
+ 	drm_panel_init(&pinfo->base, dev, &panel_funcs, DRM_MODE_CONNECTOR_DSI);
+ 
++	pinfo->base.prepare_prev_first = true;
+ 	drm_panel_add(&pinfo->base);
+ 
+ 	return 0;
+-- 
+2.43.0

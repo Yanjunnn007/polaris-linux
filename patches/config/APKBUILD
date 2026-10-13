@@ -1,0 +1,119 @@
+# Co-Maintainer: Joel Selvaraj <foss@joelselvaraj.com>
+# Stable Linux kernel with patches for SDM845 devices
+# Kernel config based on: arch/arm64/configs/defconfig and sdm845.config
+maintainer="Casey Connolly <kcxt@postmarketos.org>"
+_flavor="postmarketos-qcom-sdm845"
+pkgname=linux-$_flavor
+pkgver=7.1_rc1
+pkgrel=28
+pkgdesc="Mainline Kernel fork for SDM845 devices"
+arch="aarch64"
+_carch="arm64"
+url="https://gitlab.com/sdm845-mainline/linux"
+license="GPL-2.0-only"
+options="
+	!check
+	!strip
+	!tracedeps
+	pmb:cross-native
+	pmb:kconfigcheck-community
+	pmb:kconfigcheck-lockdown
+"
+makedepends="
+	bison
+	clang
+	elfutils-dev
+	findutils
+	flex
+	linux-headers
+	lld
+	llvm
+	openssl-dev
+	pahole
+	perl
+	postmarketos-installkernel
+	python3
+	zstd
+"
+
+_tag="sdm845-7.1-rc1-r0"
+
+# Source
+source="
+	linux-$_tag.tar.gz::https://gitlab.com/sdm845-mainline/linux/-/archive/$_tag/linux-$_tag.tar.gz
+	config-postmarketos-qcom-sdm845.aarch64
+	libbpf-Fix-UAF-in-strset__add_str.patch
+	enable-dynamic-ftrace.patch
+	dsi-10nm-pll-digtop.patch
+	panel-nt35596s-prepare-prev-first.patch
+	dts-wifi-snoc-skip-quirk.patch
+	sdm845-polaris-audio-tas2557.patch
+	qcom-usb-vbus-pmi8998.patch
+	dwc3-drd-vbus-control.patch
+	qcom-pmi8998-tcpm.patch
+	sdm845-polaris-usb-otg.patch
+	sdm845-polaris-camera.patch
+	sdm845-polaris-battery.patch
+"
+builddir="$srcdir/linux-$_tag"
+
+prepare() {
+	default_prepare
+	cp "$srcdir/config-$_flavor.$CARCH" .config
+}
+
+build() {
+	unset LDFLAGS
+	make ARCH="$_carch" LLVM=1 \
+		KBUILD_BUILD_VERSION="$((pkgrel + 1 ))-$_flavor"
+}
+
+package() {
+	if [ -e "$builddir/arch/$_carch/boot/vmlinuz.efi" ]; then
+		# ZBOOT EFI decompressor for EFI booting
+		install -Dm644 "$builddir/arch/$_carch/boot/vmlinuz.efi" \
+			"$pkgdir/boot/linux.efi"
+
+		# Old GZIP'd kernel image for boot.img compatibility
+		install -Dm644 "$builddir/arch/$_carch/boot/vmlinuz" \
+			"$pkgdir/boot/vmlinuz"
+	else
+		echo "WARNING: CONFIG_ZBOOT not enabled!"
+		install -Dm644 "$builddir/arch/$_carch/boot/Image.gz" \
+			"$pkgdir/boot/vmlinuz"
+	fi
+
+	make modules_install dtbs_install \
+		ARCH="$_carch" \
+		LLVM=1 \
+		INSTALL_PATH="$pkgdir"/boot/ \
+		INSTALL_MOD_PATH="$pkgdir"/usr/ \
+		INSTALL_MOD_STRIP=1 \
+		INSTALL_DTBS_PATH="$pkgdir"/boot/dtbs-tmp
+
+	mkdir -p "$pkgdir"/boot/dtbs/qcom
+	cp -r "$pkgdir"/boot/dtbs-tmp/qcom/sdm8* "$pkgdir"/boot/dtbs/qcom
+	rm -rf "$pkgdir"/boot/dtbs-tmp
+
+	rm -f "$pkgdir"/usr/lib/modules/*/build "$pkgdir"/usr/lib/modules/*/source
+
+	install -D "$builddir"/include/config/kernel.release \
+		"$pkgdir"/usr/share/kernel/$_flavor/kernel.release
+}
+
+sha512sums="
+94da173aaf74dd33ef8ff9015e92759481cd0da5bd8a1e52c8664fd372d48a1155655001ad2e9d26557733c71ae8bc448e4ebdf1372b8f32159907a35f0306a9  linux-sdm845-7.1-rc1-r0.tar.gz
+bbdc97fa0e5119c08f4d9f5be28ee854e22d9dc3fdbbc7acc2fb048e80b48126bbf6397bf8b18ddedf6d8baa1ecc19d8a058c74f923c3ab91ee45761a8297299  config-postmarketos-qcom-sdm845.aarch64
+e2555390d48cbbdc32a7d3f0c27599ff88f2fe3e786d1d0086caaa5b092cc3edcb6e95e2fb07034edb3793f6dc954da0662c723202eb7e2c4956c99b50919b12  libbpf-Fix-UAF-in-strset__add_str.patch
+e8b595f3e076896dc38f249c8908d58e2e6a858eaa77fe1e680f27db0e76d3d74c0b5dfebb7a4c57d546fee0b0f6eb81a38b20dfd72f985c9d02f28d79a5eceb  enable-dynamic-ftrace.patch
+78582abd7f2efb306f9c2edd28461d9e8cd515979fc824be3c5421a68c97ade56962dbbee9f2cad96e97ca716ddb917469324089f7ce9cd307d75e59e2aebea2  dsi-10nm-pll-digtop.patch
+23cac19e1a0c712eb6f2372c2dc989ab2d3d89d7ea69b11f824c90b5b29fc3d69a2a4a9ae3dae138e0757faf3811822e1f0b68905eda811ab9a73827cc4edcee  panel-nt35596s-prepare-prev-first.patch
+412c3670df99748c54332c610692fc62db1d5f3d65a6fac073c9951c2edc42977fb28c7ac1f6c5ca560eda04a7977fb343f1085f935677d2c2fd3617b3b6117f  dts-wifi-snoc-skip-quirk.patch
+fb8424b0542eaecbb1d7e4ed389e93c977c841e8d7d233318568913bef660cfd269c489d68515f8725f7561295e2ead2d577c954973b5c9da44c12045f2b8734  sdm845-polaris-audio-tas2557.patch
+0471a12cd32bb75616f9e3de078848c941632f065e0bdde0eaf51c6188327d73448e085122ab24e075f00c0bbc2e7d033a72c2ce1731895b798cd8bb149090e6  qcom-usb-vbus-pmi8998.patch
+e529bfe126314dce790ff1dd023e43625bdc2421ac6474efd6c22315cba7c260f492ba5bacca23e81b0a6500dce5d8712ac1971bae4b2f1a411343c4f7a0bf4e  dwc3-drd-vbus-control.patch
+727dfae698dc9ebbddeb7604f643c063473a6e12486c4a8d0d93ad70b3c82cf749412489a4348f90d5c508372e8b07c407a99c7aca9508c34f9dcb268ae7978c  qcom-pmi8998-tcpm.patch
+0a2ddf126ce37c2fd0e8f693f26ad26402719dd17f49a85463d68359b853ccd0d9e2f071eb84f3112da9f20c19d219ec9e107e1ac07e3fe4d0c395f196ca8e81  sdm845-polaris-usb-otg.patch
+17c4a0d23b805596c1a200d435b2789e1f0a55ea51ef428a3cd38dc58f16ca32243eb0056397d6551cf6ff52f8c414c06ccc390b0e2652067ce8104c47e680ed  sdm845-polaris-camera.patch
+87de3972488ad0165de2e0232456bd83436f4193ad2ecf425d3dc568038e33a7b9015e089d594b7814edd6eaa40174e3f743b322252cb02e7287b38441b7f692  sdm845-polaris-battery.patch
+"

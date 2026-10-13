@@ -1,0 +1,184 @@
+--- a/arch/arm64/boot/dts/qcom/sdm845-xiaomi-polaris.dts	2026-05-09 12:21:17.000000000 +0800
++++ b/arch/arm64/boot/dts/qcom/sdm845-xiaomi-polaris.dts	2026-10-13 20:27:50.777379205 +0800
+@@ -714,3 +714,181 @@
+ 	vdd-3.3-ch1-supply = <&vreg_l23a_3p3>;
+ 	status = "okay";
+ };
++
++&adsp_pas {
++	status = "okay";
++	firmware-name = "qcom/sdm845/Xiaomi/polaris/adsp.mbn";
++};
++
++/* TAS2559 + TAS2560 smart amplifiers on i2c5 (GENI QUP SE5), driving
++ * loudspeaker and earpiece receiver via QUATERNARY_MI2S_RX.
++ * Hardware confirmed from stock Xiaomi MIX 2S (polaris) DTBs:
++ *   TAS2559 @ 0x4c (reset: tlmm GPIO 14)
++ *   TAS2560 @ 0x4d (reset: tlmm GPIO 25)
++ *   Matches upstream Poco F1 (beryllium) audio implementation. */
++&i2c5 {
++	clock-frequency = <100000>;
++	status = "okay";
++
++	tas2559_codec: tas2559@4c {
++		#sound-dai-cells = <1>;
++		compatible = "ti,tas2559";
++		reg = <0x4c>;
++		ti,tas2559-reset-gpio = <&tlmm 14 0>;
++		ti,tas2560-reset-gpio = <&tlmm 25 0>;
++		ti,tas2559-addr = <0x4c>;
++		ti,tas2560-addr = <0x4d>;
++	};
++};
++
++/* QUAT I2S Uses 1 I2S SD Line for audio on TAS2559/60 amplifiers */
++&q6afedai {
++	dai@22 {
++		reg = <QUATERNARY_MI2S_RX>;
++		qcom,sd-lines = <0>;
++	};
++};
++
++&q6asmdai {
++	dai@0 {
++		reg = <MSM_FRONTEND_DAI_MULTIMEDIA1>;
++	};
++
++	dai@1 {
++		reg = <MSM_FRONTEND_DAI_MULTIMEDIA2>;
++	};
++
++	dai@2 {
++		reg = <MSM_FRONTEND_DAI_MULTIMEDIA3>;
++	};
++
++	dai@3 {
++		reg = <MSM_FRONTEND_DAI_MULTIMEDIA4>;
++	};
++};
++
++/* qdsp6 voice services */
++&q6cvp {
++	status = "okay";
++};
++
++&q6cvs {
++	status = "okay";
++};
++
++&q6mvm {
++	status = "okay";
++};
++
++&q6voicedai {
++	dai@1 {
++		reg = <1>; /* VOICEMMODE1 */
++	};
++};
++
++&sound {
++	compatible = "qcom,db845c-sndcard", "qcom,sdm845-sndcard";
++	pinctrl-0 = <&quat_mi2s_active &quat_mi2s_sd0_active>;
++	pinctrl-names = "default";
++	model = "Xiaomi Mi MIX 2S";
++	audio-routing =
++		"RX_BIAS", "MCLK",
++		"AMIC1", "MIC BIAS1",
++		"AMIC2", "MIC BIAS2",
++		"AMIC3", "MIC BIAS3";
++
++	mm1-dai-link {
++		link-name = "MultiMedia1";
++		cpu {
++			sound-dai = <&q6asmdai MSM_FRONTEND_DAI_MULTIMEDIA1>;
++		};
++	};
++
++	mm2-dai-link {
++		link-name = "MultiMedia2";
++		cpu {
++			sound-dai = <&q6asmdai MSM_FRONTEND_DAI_MULTIMEDIA2>;
++		};
++	};
++
++	mm3-dai-link {
++		link-name = "MultiMedia3";
++		cpu {
++			sound-dai = <&q6asmdai MSM_FRONTEND_DAI_MULTIMEDIA3>;
++		};
++	};
++
++	mm4-dai-link {
++		link-name = "MultiMedia4";
++		cpu {
++			sound-dai = <&q6asmdai MSM_FRONTEND_DAI_MULTIMEDIA4>;
++		};
++	};
++
++	dai-link-voicemmode1 {
++		link-name = "VoiceMMode1";
++		cpu {
++			sound-dai = <&q6voicedai 1>; /* VOICEMMODE1 */
++		};
++	};
++
++	tas2559-dai-link {
++		link-name = "Primary Spkr Playback";
++		cpu {
++			sound-dai = <&q6afedai QUATERNARY_MI2S_RX>;
++		};
++
++		platform {
++			sound-dai = <&q6routing>;
++		};
++
++		codec {
++			sound-dai = <&tas2559_codec 0>;
++		};
++	};
++
++	slim-dai-link {
++		link-name = "SLIM Playback";
++		cpu {
++			sound-dai = <&q6afedai SLIMBUS_0_RX>;
++		};
++
++		platform {
++			sound-dai = <&q6routing>;
++		};
++
++		codec {
++			sound-dai = <&wcd9340 0>;
++		};
++	};
++
++	slimcap-dai-link {
++		link-name = "SLIM WCD Capture";
++		cpu {
++			sound-dai = <&q6afedai SLIMBUS_0_TX>;
++		};
++
++		platform {
++			sound-dai = <&q6routing>;
++		};
++
++		codec {
++			sound-dai = <&wcd9340 1>;
++		};
++	};
++
++	slimcap2-dai-link {
++		link-name = "SLIM WCD Capture 2";
++		cpu {
++			sound-dai = <&q6afedai SLIMBUS_1_TX>;
++		};
++
++		platform {
++			sound-dai = <&q6routing>;
++		};
++
++		codec {
++			sound-dai = <&wcd9340 2>;
++		};
++	};
++};

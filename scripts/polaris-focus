@@ -1,0 +1,26 @@
+#!/bin/sh
+DEV=$(media-ctl -p 2>/dev/null | grep -A 3 ak7375 | grep 'device node' | awk '{print $4}')
+[ -z "$DEV" ] && DEV=/dev/v4l-subdev20
+
+if [ -z "$1" ]; then
+    CUR=$(v4l2-ctl -d $DEV -C focus_absolute 2>/dev/null)
+    echo "$CUR"
+    echo "使用方法: polaris-focus <0-4095 | inf | mid | close | macro>"
+    echo "  polaris-focus inf    -> 无限远/远景 (0)"
+    echo "  polaris-focus mid    -> 中景 1~2米 (1500)"
+    echo "  polaris-focus close  -> 近景 30~50厘米 (2500)"
+    echo "  polaris-focus macro  -> 极限微距 5~10厘米 (3500)"
+    echo "  polaris-focus 2000   -> 自定义 DAC 步进值 (0-4095)"
+    exit 0
+fi
+
+case "$1" in
+    inf|infinity) VAL=0 ;;
+    mid) VAL=1500 ;;
+    close) VAL=2500 ;;
+    macro) VAL=3500 ;;
+    *) VAL="$1" ;;
+esac
+
+v4l2-ctl -d $DEV -c focus_absolute=$VAL
+echo "成功设置对焦位置: $VAL ($(v4l2-ctl -d $DEV -C focus_absolute 2>/dev/null))"

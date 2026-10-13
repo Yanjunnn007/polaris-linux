@@ -1,0 +1,63 @@
+--- a/drivers/usb/dwc3/core.h	2026-10-11 20:59:04.517542490 +0800
++++ b/drivers/usb/dwc3/core.h	2026-10-11 20:59:04.517957390 +0800
+@@ -24,6 +24,7 @@
+ #include <linux/workqueue.h>
+ 
+ #include <linux/usb/ch9.h>
++#include <linux/regulator/consumer.h>
+ #include <linux/usb/gadget.h>
+ #include <linux/usb/otg.h>
+ #include <linux/usb/role.h>
+@@ -1424,6 +1425,7 @@
+ 	struct dentry		*debug_root;
+ 	u32			gsbuscfg0_reqinfo;
+ 	u32			wakeup_pending_funcs;
++	struct regulator	*vbus_reg;
+ };
+ 
+ #define INCRX_BURST_MODE 0
+--- a/drivers/usb/dwc3/drd.c	2026-10-11 20:59:04.517698990 +0800
++++ b/drivers/usb/dwc3/drd.c	2026-10-11 20:59:04.518598290 +0800
+@@ -453,6 +453,17 @@
+ 	struct dwc3 *dwc = usb_role_switch_get_drvdata(sw);
+ 	u32 mode;
+ 
++	if (dwc->vbus_reg) {
++		if (role == USB_ROLE_HOST) {
++			int ret = regulator_enable(dwc->vbus_reg);
++			if (ret)
++				dev_err(dwc->dev, "failed to enable vbus regulator: %d\n", ret);
++		} else {
++			if (regulator_is_enabled(dwc->vbus_reg))
++				regulator_disable(dwc->vbus_reg);
++		}
++	}
++
+ 	switch (role) {
+ 	case USB_ROLE_HOST:
+ 		mode = DWC3_GCTL_PRTCAP_HOST;
+@@ -506,6 +517,14 @@
+ 	struct usb_role_switch_desc dwc3_role_switch = {NULL};
+ 	u32 mode;
+ 
++	dwc->vbus_reg = devm_regulator_get_optional(dwc->dev, "vbus");
++	if (IS_ERR(dwc->vbus_reg)) {
++		if (dwc->dev->parent)
++			dwc->vbus_reg = devm_regulator_get_optional(dwc->dev->parent, "vbus");
++	}
++	if (IS_ERR(dwc->vbus_reg))
++		dwc->vbus_reg = NULL;
++
+ 	dwc->role_switch_default_mode = usb_get_role_switch_default_mode(dwc->dev);
+ 	if (dwc->role_switch_default_mode == USB_DR_MODE_HOST) {
+ 		mode = DWC3_GCTL_PRTCAP_HOST;
+@@ -597,6 +616,9 @@
+ {
+ 	unsigned long flags;
+ 
++	if (dwc->vbus_reg && regulator_is_enabled(dwc->vbus_reg))
++		regulator_disable(dwc->vbus_reg);
++
+ 	if (dwc->role_sw)
+ 		usb_role_switch_unregister(dwc->role_sw);
+ 

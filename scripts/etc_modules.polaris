@@ -1,0 +1,18 @@
+af_packet
+ipv6
+# polaris 设备移植修复: WiFi/蓝牙开机自动加载
+# WiFi 依赖链(不含 qcom_wcnss_pil——它和 ath10k_snoc 抢固件会崩)
+qcom_pil_info
+qcom_q6v5
+qcom_q6v5_pas
+qcom_common
+# WiFi 本体(ath10k_snoc 自己加载固件)
+ath10k_core
+ath10k_snoc
+# 蓝牙
+hci_uart
+btqca
+qcom-spmi-rradc
+qcom_smbx
+hid-generic
+evdev

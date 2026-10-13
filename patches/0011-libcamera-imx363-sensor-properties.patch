@@ -1,0 +1,48 @@
+diff -ruN a/src/ipa/libipa/camera_sensor_helper.cpp b/src/ipa/libipa/camera_sensor_helper.cpp
+--- a/src/ipa/libipa/camera_sensor_helper.cpp	2026-10-13 09:44:36.493277918 +0800
++++ b/src/ipa/libipa/camera_sensor_helper.cpp	2026-10-13 09:44:36.623915418 +0800
+@@ -566,6 +566,18 @@
+ };
+ REGISTER_CAMERA_SENSOR_HELPER("imx258", CameraSensorHelperImx258)
+ 
++class CameraSensorHelperImx363 : public CameraSensorHelper
++{
++public:
++	CameraSensorHelperImx363()
++	{
++		/* From datasheet: 0x40 at 10bits. */
++		blackLevel_ = 4096;
++		gain_ = AnalogueGainLinear{ 0, 512, -1, 512 };
++	}
++};
++REGISTER_CAMERA_SENSOR_HELPER("imx363", CameraSensorHelperImx363)
++
+ class CameraSensorHelperImx283 : public CameraSensorHelper
+ {
+ public:
+diff -ruN a/src/libcamera/sensor/camera_sensor_properties.cpp b/src/libcamera/sensor/camera_sensor_properties.cpp
+--- a/src/libcamera/sensor/camera_sensor_properties.cpp	2026-10-13 09:44:36.495877318 +0800
++++ b/src/libcamera/sensor/camera_sensor_properties.cpp	2026-10-13 09:44:36.624875518 +0800
+@@ -210,6 +210,22 @@
+ 				.hblankDelay = 2
+ 			},
+ 		} },
++		{ "imx363", {
++			.unitCellSize = { 1400, 1400 },
++			.testPatternModes = {
++				{ controls::draft::TestPatternModeOff, 0 },
++				{ controls::draft::TestPatternModeSolidColor, 1 },
++				{ controls::draft::TestPatternModeColorBars, 2 },
++				{ controls::draft::TestPatternModeColorBarsFadeToGray, 3 },
++				{ controls::draft::TestPatternModePn9, 4 },
++			},
++			.sensorDelays = {
++				.exposureDelay = 2,
++				.gainDelay = 2,
++				.vblankDelay = 2,
++				.hblankDelay = 2
++			},
++		} },
+ 		{ "imx258", {
+ 			.unitCellSize = { 1120, 1120 },
+ 			.testPatternModes = {

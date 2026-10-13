@@ -1,0 +1,15 @@
+--- a/arch/arm64/boot/dts/qcom/sdm845-xiaomi-polaris.dts
++++ b/arch/arm64/boot/dts/qcom/sdm845-xiaomi-polaris.dts
+@@ -610,6 +610,12 @@
+ &pmi8998_charger {
+ 	monitored-battery = <&battery>;
+ 	status = "okay";
+ };
++
++&pmi8998_fg {
++	power-supplies = <&pmi8998_charger>;
++	monitored-battery = <&battery>;
++	status = "okay";
++};
+ 
+ &pmi8998_lsid0 {

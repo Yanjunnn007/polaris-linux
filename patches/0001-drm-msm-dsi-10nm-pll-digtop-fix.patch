@@ -1,0 +1,53 @@
+From: postmarketOS polaris fix <local@localhost>
+Date: Tue, 6 Oct 2026 00:00:00 +0000
+Subject: [PATCH] drm/msm/dsi/phy: power up the digital top before starting
+ the 10nm PLL
+
+dsi_pll_10nm_vco_prepare() only sets CMN_CTRL_0 BIT(5) (PLL bias) via
+dsi_pll_enable_pll_bias(), but leaves the PHY digital top powered down
+(BIT(6) clear).  Since the clock framework can enable the PLL early at
+probe time (via assigned-clock-parents in qcom dispcc), before the PHY
+driver's dsi_10nm_phy_enable() runs, the PLL cannot lock and
+dsi_pll_10nm_lock_status() reads back COMMON_STATUS_ONE == 0x00000000:
+
+  msm_dsi_phy ae94400.phy: [drm:dsi_pll_10nm_vco_prepare] *ERROR* DSI PLL(0) lock failed, status=0x00000000
+  panel-jdi-nt35596s ae94000.dsi.0: failed to send DCS Init 1st Code: -22
+
+This mirrors the 7nm fix from Dmitry Baryshkov
+("drm/msm/dsi/phy: power up the digital top before starting the 7nm PLL")
+and Luca Weiss confirmed the same fix applies to the 10nm PHY.
+
+Power up the digital top together with the PLL bias, and clear both bits
+on disable.
+
+Tested on Xiaomi Mi MIX 2S (polaris, SDM845): DSI PLL locks, panel
+receives DCS init, display outputs.
+
+Signed-off-by: polaris port <local@localhost>
+---
+ drivers/gpu/drm/msm/dsi/phy/dsi_phy_10nm.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/gpu/drm/msm/dsi/phy/dsi_phy_10nm.c b/drivers/gpu/drm/msm/dsi/phy/dsi_phy_10nm.c
+--- a/drivers/gpu/drm/msm/dsi/phy/dsi_phy_10nm.c
++++ b/drivers/gpu/drm/msm/dsi/phy/dsi_phy_10nm.c
+@@ -303,7 +303,7 @@ static void dsi_pll_disable_pll_bias(struct dsi_pll_10nm *pll)
+ 	u32 data = readl(pll->phy->base + REG_DSI_10nm_PHY_CMN_CTRL_0);
+ 
+ 	writel(0, pll->phy->pll_base + REG_DSI_10nm_PHY_PLL_SYSTEM_MUXES);
+-	writel(data & ~BIT(5), pll->phy->base + REG_DSI_10nm_PHY_CMN_CTRL_0);
++	writel(data & ~(BIT(6) | BIT(5)), pll->phy->base + REG_DSI_10nm_PHY_CMN_CTRL_0);
+ 	ndelay(250);
+ }
+ 
+@@ -311,7 +311,7 @@ static void dsi_pll_enable_pll_bias(struct dsi_pll_10nm *pll)
+ {
+ 	u32 data = readl(pll->phy->base + REG_DSI_10nm_PHY_CMN_CTRL_0);
+ 
+-	writel(data | BIT(5), pll->phy->base + REG_DSI_10nm_PHY_CMN_CTRL_0);
++	writel(data | BIT(6) | BIT(5), pll->phy->base + REG_DSI_10nm_PHY_CMN_CTRL_0);
+ 	writel(0xc0, pll->phy->pll_base + REG_DSI_10nm_PHY_PLL_SYSTEM_MUXES);
+ 	ndelay(250);
+ }
+-- 
+2.43.0
