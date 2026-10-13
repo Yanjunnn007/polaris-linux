@@ -204,9 +204,11 @@ fastboot flash boot boot.img
 - **libcamera 补丁**：LGPL-2.1-or-later（与 libcamera 一致）
 - **文档与脚本**：MIT（见 `LICENSE`）
 
-> 本项目**不包含**任何小米专有固件或第三方二进制。所需的固件
-> （`adsp.mbn`、`tas2559_uCDSP.bin` 等）请从你自己的设备分区提取，
-> 提取方法见 `docs/`。
+> 本项目不重复分发固件二进制。所需固件由 postmarketOS 官方仓库的
+> `firmware-xiaomi-polaris` 包提供，其中部分文件同时也存在于 linux-firmware。
+> 注意该包的默认安装路径与 7.1 内核 dts 不一致，必须运行
+> `scripts/patch_firmware.sh` 补齐 `Xiaomi/` 路径，否则 WiFi / 蓝牙 / GPU
+> 都无法工作。
 
 ---
 
