@@ -1,0 +1,64 @@
+# 构建产物 / 大文件（GitHub 单文件限 100MB，请放 Release 或网盘）
+*.img
+*.tar.gz
+*.tar.xz
+*.zip
+*.7z
+
+# 内核源码树（如本地克隆进来）
+linux/
+linux-*/
+*.o
+*.ko
+*.mod
+*.mod.c
+*.cmd
+.tmp_versions/
+Module.symvers
+modules.order
+
+# 编译配置产物
+.config
+.config.old
+*.config.bak
+
+# Windows 驱动包（含第三方版权二进制，不发布）
+windows-ncm-driver/
+*.sys
+*.cat
+
+# 固件（小米专有，不可再分发）
+*.mbn
+*.tlv
+firmware/
+lib/firmware/
+
+# 隐私 / 本地环境
+*.log
+kern_live.log
+gpu_watch.log
+dmesg*.txt
+serial-*.txt
+local.properties
+.env
+.vscode/
+.idea/
+
+# 大尺寸中间产物
+*.raw
+*.dtb
+*.dtbo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.bak
