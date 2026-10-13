@@ -1,0 +1,30 @@
+# 统一使用 LF，避免 Windows 上的 CRLF 破坏 Linux 脚本
+* text=auto eol=lf
+
+# 二进制文件不做转换
+*.img    binary
+*.tar.gz binary
+*.gz     binary
+*.png    binary
+*.jpg    binary
+*.dtb    binary
+*.mbn    binary
+
+# Shell / Python 脚本必须 LF（否则在设备上无法执行）
+*.sh     text eol=lf
+*.py     text eol=lf
+polaris-focus text eol=lf
+etc_modules.polaris text eol=lf
+
+# 补丁文件必须 LF（否则 git apply 报错）
+*.patch  text eol=lf
+
+# Windows 脚本（PowerShell 5+ 可正常处理 LF）
+*.ps1    text eol=crlf
+*.bat    text eol=crlf
+*.cmd    text eol=crlf
+
+# 文档
+*.md     text eol=lf
+*.txt    text eol=lf
+LICENSE  text eol=lf
